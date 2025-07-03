@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventory Management</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #fff;
+      display: flex;
+    }
+    .sidebar {
+      width: 220px;
+      background-color: #1e1e2f;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      height: 100vh;
+    }
+    .logo-wrapper {
+      background: #ffcc00;
+      padding: 20px;
+      border-radius: 50% / 30%;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo-wrapper h2 {
+      color: #1e1e2f;
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .sidebar button {
+      background: #2d2d44;
+      color: white;
+      border: none;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .sidebar button:hover {
+      background: #444466;
+    }
+    .content {
+      flex: 1;
+      padding: 30px;
+      overflow-x: auto;
+      position: relative;
+    }
+    h1 {
+      text-align: center;
+      color: #ffcc00;
+    }
+    .top-controls, .center {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    input[type="text"], input[type="number"] {
+      padding: 10px;
+      font-size: 16px;
+      width: 180px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #1e1e2f;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 10px;
+      text-align: center;
+    }
+    .delete-btn {
+      background: crimson;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .totals {
+      margin-top: 20px;
+      font-size: 1.2em;
+      text-align: center;
+      color: #ffcc00;
+    }
+    .center button {
+      background: #ffcc00;
+      color: #1e1e2f;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .center button:hover {
+      background: #e6b800;
+    }
+    #notepad {
+      display: none;
+      position: absolute;
+      top: 120px;
+      left: 250px;
+      background: #1e1e2f;
+      border: 1px solid #444;
+      padding: 20px;
+      z-index: 100;
+      border-radius: 10px;
+      min-width: 200px;
+      resize: both;
+      overflow: auto;
+    }
+    #notepad textarea {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    #noteButtons button {
+      margin-top: 10px;
+      padding: 5px 10px;
+      font-size: 14px;
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #noteButtons button:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo-wrapper">
+      <h2>OmInventory</h2>
+    </div>
+    <button onclick="toggleNotepad()">📝 Notepad</button>
+    <button onclick="exportToExcel()">📁 Export</button>
+    <button onclick="shareOnWhatsApp()">📤 WhatsApp Share</button>
+    <button onclick="saveToday()">💾 Save Today</button>
+    <button onclick="loadToday()">📂 Load Today</button>
+  </div>
+
+  <div class="content">
+    <h1>📦 Inventory Management Dashboard</h1>
+    <div class="top-controls">
+      <input type="text" id="searchInput" placeholder="🔍 Search by product name..." onkeyup="searchProduct()"/>
+    </div>
+    <div class="top-controls">
+      <input type="text" id="productName" placeholder="Product name" />
+      <input type="number" id="qty" placeholder="Qty" />
+      <input type="number" id="buy" placeholder="Buy ₹" />
+      <input type="number" id="sell" placeholder="Sell ₹" />
+      <button onclick="addProduct()">➕ Add Product</button>
+    </div>
+
+    <table id="inventoryTable">
+      <thead>
+        <tr>
+          <th>Product</th><th>Qty</th><th>Buy ₹</th><th>Sell ₹</th><th>Profit ₹</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="totals" id="totalProfit">💰 Total Profit: ₹0</div>
+  </div>
+
+  <!-- Notepad -->
+  <div id="notepad">
+    <strong>Quick Notes</strong>
+    <textarea id="noteText" rows="6" placeholder="Write something..."></textarea>
+    <div id="noteButtons">
+      <button onclick="saveNote()">💾 Save</button>
+      <button onclick="clearNote()">🗑 Clear</button>
+    </div>
+  </div>
+
+  <script>
+    function toggleNotepad() {
+      const el = document.getElementById("notepad");
+      el.style.display = el.style.display === "none" ? "block" : "none";
+    }
+    function saveNote() {
+      const note = document.getElementById("noteText").value;
+      localStorage.setItem("omNote", note);
+      alert("Note saved");
+    }
+    function clearNote() {
+      document.getElementById("noteText").value = "";
+      localStorage.removeItem("omNote");
+    }
+    function searchProduct() {
+      const input = document.getElementById("searchInput").value.toLowerCase();
+      const rows = document.querySelectorAll("#inventoryTable tbody tr");
+      rows.forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(input) ? "" : "none";
+      });
+    }
+    function addProduct() {
+      const product = document.getElementById("productName").value;
+      const qty = +document.getElementById("qty").value;
+      const buy = +document.getElementById("buy").value;
+      const sell = +document.getElementById("sell").value;
+      if (!product || !qty || !buy || !sell) return alert("Fill all fields");
+      const profit = (sell - buy) * qty;
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${product}</td>
+        <td>${qty}</td>
+        <td>${buy}</td>
+        <td>${sell}</td>
+        <td>${profit}</td>
+        <td><button class="delete-btn" onclick="deleteRow(this, ${profit})">Delete</button></td>
+      `;
+      document.querySelector("#inventoryTable tbody").appendChild(row);
+      updateTotalProfit(profit);
+      document.getElementById("productName").value = "";
+      document.getElementById("qty").value = "";
+      document.getElementById("buy").value = "";
+      document.getElementById("sell").value = "";
+    }
+    let totalProfit = 0;
+    function updateTotalProfit(amount) {
+      totalProfit += amount;
+      document.getElementById("totalProfit").innerText = `💰 Total Profit: ₹${totalProfit}`;
+    }
+    function deleteRow(btn, profit) {
+      btn.parentElement.parentElement.remove();
+      totalProfit -= profit;
+      document.getElementById("totalProfit").innerText = `💰 Total Profit: ₹${totalProfit}`;
+    }
+    function shareOnWhatsApp() {
+      const text = `Inventory Summary\nTotal Profit: ₹${totalProfit}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
+    }
+    function exportToExcel() {
+      alert("Excel export feature will be added soon!");
+    }
+    function saveToday() {
+      const data = document.querySelector("#inventoryTable tbody").innerHTML;
+      localStorage.setItem("todayInventory", data);
+      localStorage.setItem("todayProfit", totalProfit);
+      alert("Today's data saved ✅");
+    }
+    function loadToday() {
+      const savedData = localStorage.getItem("todayInventory");
+      const savedProfit = localStorage.getItem("todayProfit");
+      if (savedData) {
+        document.querySelector("#inventoryTable tbody").innerHTML = savedData;
+        totalProfit = Number(savedProfit) || 0;
+        document.getElementById("totalProfit").innerText = `💰 Total Profit: ₹${totalProfit}`;
+
+        // Re-bind delete buttons
+        document.querySelectorAll(".delete-btn").forEach(btn => {
+          btn.onclick = () => {
+            const row = btn.parentElement.parentElement;
+            const profit = Number(row.children[4].innerText);
+            deleteRow(btn, profit);
+          };
+        });
+
+        alert("Today's data loaded ✅");
+      } else {
+        alert("No saved data found for today ❌");
+      }
+    }
+    window.onload = () => {
+      const saved = localStorage.getItem("omNote");
+      if (saved) document.getElementById("noteText").value = saved;
+    }
+  </script>
+</body>
+</html>
